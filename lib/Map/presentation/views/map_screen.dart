@@ -1,11 +1,11 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:flutter_map_location_marker/flutter_map_location_marker.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:location/location.dart';
 import 'package:http/http.dart' as http;
+import '../widgets/map_widget.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -35,7 +35,7 @@ class _MapScreenState extends State<MapScreen> {
       appBar: AppBar(
         centerTitle: true,
         backgroundColor: Colors.blueGrey,
-        title: const Text("Map", style: TextStyle(color: Colors.white)),
+        title: const Text("Flutter Map", style: TextStyle(color: Colors.white)),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _userCurrentLocation,
@@ -44,57 +44,14 @@ class _MapScreenState extends State<MapScreen> {
       ),
       body: Stack(
         children: [
-          isLoading ? Center(child: CircularProgressIndicator(),)
-          : FlutterMap(
+          isLoading
+              ? Center(child: CircularProgressIndicator())
+              : MapWidget(
                 mapController: _mapController,
-                options: MapOptions(
-                  initialCenter: _currentLocation ?? LatLng(30.0444, 31.2357),
-                  initialZoom: 15,
-                  minZoom: 0,
-                  maxZoom: 100,
-                ),
-                children: [
-                  TileLayer(
-                    urlTemplate:
-                        "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-                  ),
-                  CurrentLocationLayer(
-                    style: const LocationMarkerStyle(
-                      marker: DefaultLocationMarker(
-                        child: Icon(Icons.location_pin, color: Colors.red),
-                      ),
-                      markerSize: Size(35, 35),
-                      markerDirection: MarkerDirection.heading,
-                    ),
-                  ),
-                  if (_destination != null)
-                    MarkerLayer(
-                      markers: [
-                        Marker(
-                          point: _destination!,
-                          width: 50,
-                          height: 50,
-                          child: Icon(
-                            Icons.location_pin,
-                            size: 40,
-                            color: Colors.red,
-                          ),
-                        ),
-                      ],
-                    ),
-                  if (_currentLocation != null &&
-                      _destination != null &&
-                      _route.isNotEmpty)
-                    PolylineLayer(
-                      polylines: [
-                        Polyline(
-                          points: _route,
-                          strokeWidth: 5,
-                          color: Colors.red,
-                        ),
-                      ],
-                    ),
-                ],
+                currentLocation: _currentLocation,
+                destination: _destination,
+                route: _route,
+                onTap: _onMapTap,
               ),
           Positioned(
             top: 10,
@@ -158,6 +115,9 @@ class _MapScreenState extends State<MapScreen> {
       ),
     );
   }
+
+
+
 
   Future<void> _initializeLocation() async {
     if (!await _checkTheRequestPermission()) return;
@@ -274,5 +234,12 @@ class _MapScreenState extends State<MapScreen> {
   void _zoomOut() {
     final zoom = _mapController.camera.zoom;
     _mapController.move(_mapController.camera.center, zoom - 1);
+  }
+
+  void _onMapTap(LatLng latLng) async {
+    setState(() {
+      _destination = latLng;
+    });
+    await fetchRoute();
   }
 }
